@@ -1,0 +1,69 @@
+package main.java.me.cuebyte.nexus.commands;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import javax.annotation.Nullable;
+
+import main.java.me.cuebyte.nexus.Controller;
+import main.java.me.cuebyte.nexus.customized.NexusDatabase;
+import main.java.me.cuebyte.nexus.customized.NexusPlayer;
+import main.java.me.cuebyte.nexus.files.FileConfig;
+import main.java.me.cuebyte.nexus.utils.PermissionsUtils;
+
+import org.spongepowered.api.command.CommandCallable;
+import org.spongepowered.api.command.CommandException;
+import org.spongepowered.api.command.CommandResult;
+import org.spongepowered.api.command.CommandSource;
+import org.spongepowered.api.entity.living.player.Player;
+import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.format.TextColors;
+import org.spongepowered.api.world.Location;
+import org.spongepowered.api.world.World;
+
+
+public class CommandAFK implements CommandCallable {
+
+	@Override
+	public CommandResult process(CommandSource sender, String arguments) throws CommandException {
+
+		if(sender instanceof Player == false) { sender.sendMessage(Text.builder("Cannot be run by the console!").color(TextColors.RED).build()); return CommandResult.success(); }
+
+		if(!PermissionsUtils.has(sender, "nexus.afk")) { sender.sendMessage(Text.builder("You do not have permissions!").color(TextColors.RED).build()); return CommandResult.success(); }
+
+		Player player = (Player) sender;
+		NexusPlayer p = NexusDatabase.getPlayer(player.getUniqueId().toString());
+
+		double time = System.currentTimeMillis();
+
+		if(p.getAFK()) {
+			Controller.broadcast(Text.of(TextColors.GOLD, player.getName(), TextColors.GRAY, " is no longer afk."));
+			p.setAFK(false);
+			p.setLastaction(time);
+		}
+		else if(!p.getAFK()) {
+			Controller.broadcast(Text.of(TextColors.GOLD, player.getName(), TextColors.GRAY, " is now afk."));
+			p.setAFK(true);
+			p.setLastaction(time - FileConfig.AFK_TIMER_IN_SECONDS() * 1000);
+		}
+
+		NexusDatabase.addPlayer(p.getUUID(), p);
+
+		return CommandResult.success();
+
+	}
+
+	private final Text usage = Text.builder("Usage: /afk").color(TextColors.GOLD).build();
+	private final Text help = Text.builder("Help: /afk").color(TextColors.GOLD).build();
+	private final Text description = Text.builder("Nexus | AFK Command").color(TextColors.GOLD).build();
+	private List<String> suggestions = new ArrayList<String>();
+	private String permission = "";
+
+	public Text getUsage(CommandSource sender) { return usage; }
+	public Optional<Text> getHelp(CommandSource sender) { return Optional.of(help); }
+	public Optional<Text> getShortDescription(CommandSource sender) { return Optional.of(description); }
+	public boolean testPermission(CommandSource sender) { return permission.equals("") ? true : sender.hasPermission(permission); }
+	public List<String> getSuggestions(CommandSource arg0, String arg1,	@Nullable Location<World> arg2) throws CommandException { return suggestions; }
+
+}
